@@ -15,7 +15,9 @@ import UIKit
 
 final class MediaMixerHandler: NSObject {
     var texture: HKStreamFlutterTexture?
-    private lazy var mixer = MediaMixer(multiTrackAudioMixingEnabled: false)
+    private lazy var mixer = MediaMixer(captureSessionMode: .multi, multiTrackAudioMixingEnabled: false)
+    private var attachedVideoTracks: [UInt8] = []
+    private var addedVideoTrackScreenObjects: [VideoTrackScreenObject] = []
 
     override init() {
         super.init()
@@ -28,6 +30,10 @@ final class MediaMixerHandler: NSObject {
         Task {
             await mixer.addOutput(output)
             await mixer.startRunning()
+
+            var videoMixerSettings = await mixer.videoMixerSettings
+            videoMixerSettings.mode = .offscreen
+            await mixer.setVideoMixerSettings(videoMixerSettings)
         }
     }
 
@@ -44,7 +50,9 @@ final class MediaMixerHandler: NSObject {
 
     func dispose() async {
         await stopRunning()
-        _ = try? await mixer.attachVideo(nil, track: 0)
+        for track in attachedVideoTracks {
+            _ = try? await mixer.attachVideo(nil, track: track)
+        }
         _ = try? await mixer.attachAudio(nil, track: 0)
     }
 
@@ -157,10 +165,11 @@ extension MediaMixerHandler: MethodCallHandler {
         case "RtmpStream#attachVideo":
             let source = arguments["source"] as? [String: Any?]
             let id = source?["id"] as? String
-            let track = arguments["track"] as? UInt8
+            let track = arguments["track"] as? Int
             guard let id = id, let track = track else {
                 Task {
                     try? await mixer.attachVideo(nil, track: 0)
+                    attachedVideoTracks.append(0)
                     result(nil)
                 }
                 return
@@ -168,8 +177,55 @@ extension MediaMixerHandler: MethodCallHandler {
             let device = AVCaptureDevice.init(uniqueID: id)
             Task {
                 if let device = device {
-                    try? await mixer.attachVideo(device, track: track)
+                    try? await mixer.attachVideo(device, track: UInt8(track))
+                    attachedVideoTracks.append(UInt8(track))
                 }
+                result(nil)
+            }
+        case "RtmpStream#screenAddChild":
+            guard
+                let child = arguments["child"] as? [String: Any?] else {
+                result(nil)
+                return
+            }
+            Task { @ScreenActor in
+                let videoTrackScreenObject = VideoTrackScreenObject()
+                if let track = child["track"] as? Int {
+                    videoTrackScreenObject.track = UInt8(track)
+                }
+                if let isVisible = child["isVisible"] as? Bool {
+                    videoTrackScreenObject.isVisible = isVisible
+                }
+                if let size = child["size"] as? [String: Any?],
+                let width = size["width"] as? Double,
+                let height = size["height"] as? Double {
+                    videoTrackScreenObject.size = CGSize(width: width, height: height)
+                }
+                if let layoutMargin = child["layoutMargin"] as? [String: Any?],
+                let left = layoutMargin["left"] as? Double,
+                let top = layoutMargin["top"] as? Double,
+                let right = layoutMargin["right"] as? Double,
+                let bottom = layoutMargin["bottom"] as? Double {
+                    videoTrackScreenObject.layoutMargin = NSEdgeInsets(top: top, left: left, bottom: bottom, right: right)
+                }
+                if let horizontalAlignment = child["horizontalAlignment"] as? String {
+                    videoTrackScreenObject.horizontalAlignment = switch horizontalAlignment {
+                        case "left": .left
+                        case "center": .center
+                        case "right": .right
+                        default: .left
+                    }
+                }
+                if let verticalAlignment = child["verticalAlignment"] as? String {
+                    videoTrackScreenObject.verticalAlignment = switch verticalAlignment {
+                        case "top": .top
+                        case "middle": .middle
+                        case "bottom": .bottom
+                        default: .top
+                    }
+                }
+                addedVideoTrackScreenObjects.append(videoTrackScreenObject)
+                try! await mixer.screen.addChild(videoTrackScreenObject)
                 result(nil)
             }
         default:

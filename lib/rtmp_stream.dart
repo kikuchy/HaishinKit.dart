@@ -4,6 +4,8 @@ import 'package:haishin_kit/av_capture_session_preset.dart';
 import 'package:haishin_kit/haishin_kit_platform_interface.dart';
 import 'package:haishin_kit/rtmp_connection.dart';
 import 'package:haishin_kit/rtmp_stream_platform_interface.dart';
+import 'package:haishin_kit/screen.dart';
+import 'package:haishin_kit/screen_object.dart';
 import 'package:haishin_kit/screen_settings.dart';
 import 'package:haishin_kit/stream.dart';
 import 'package:haishin_kit/video_settings.dart';
@@ -34,6 +36,8 @@ class RtmpStream extends Stream {
 
   @override
   int? get memory => _memory;
+  @override
+  Screen get screen => RtmpStreamScreen(this);
 
   EventChannel get eventChannel => _eventChannel;
 
@@ -176,5 +180,20 @@ class RtmpStream extends Stream {
   Future<void> dispose() async {
     assert(_memory != null);
     RtmpStreamPlatform.instance.dispose({"memory": _memory});
+  }
+}
+
+class RtmpStreamScreen extends Screen {
+  final RtmpStream stream;
+
+  RtmpStreamScreen(this.stream);
+
+  @override
+  Future<void> addChild(VideoTrackScreenObject child) async {
+    assert(stream.memory != null);
+    await RtmpStreamPlatform.instance.screenAddChild({
+      "memory": stream.memory,
+      "child": child.toMap(),
+    });
   }
 }

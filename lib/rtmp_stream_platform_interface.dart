@@ -105,4 +105,9 @@ abstract class RtmpStreamPlatform extends PlatformInterface {
   Future<void> dispose(Map<String, dynamic> params) {
     throw UnimplementedError('dispose() has not been implemented.');
   }
+
+  /// Adds the specified screen object as a child of the current screen object container.
+  Future<void> screenAddChild(Map<String, dynamic> params) {
+    throw UnimplementedError('screenAddChild() has not been implemented.');
+  }
 }

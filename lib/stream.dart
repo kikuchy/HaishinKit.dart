@@ -1,5 +1,6 @@
 import 'package:haishin_kit/audio_source.dart';
 import 'package:haishin_kit/av_capture_session_preset.dart';
+import 'package:haishin_kit/screen.dart';
 import 'package:haishin_kit/screen_settings.dart';
 import 'package:haishin_kit/video_settings.dart';
 import 'package:haishin_kit/video_source.dart';
@@ -10,6 +11,9 @@ import 'audio_settings.dart';
 abstract class Stream {
   /// The memory address.
   int? get memory;
+
+  /// The offscreen rendering object.
+  Screen get screen;
 
   /// Gets the frameRate.
   int get frameRate;

@@ -54,7 +54,8 @@ extension RTMPStreamHandler: MethodCallHandler {
             "RtmpStream#setSessionPreset",
             "RtmpStream#attachAudio",
             "RtmpStream#attachVideo",
-            "RtmpStream#setScreenSettings":
+            "RtmpStream#setScreenSettings",
+            "RtmpStream#screenAddChild":
             plugin.mixer?.handle(call, result: result)
         case "RtmpStream#setAudioSettings":
             guard

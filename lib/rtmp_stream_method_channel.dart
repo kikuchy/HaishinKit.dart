@@ -111,4 +111,10 @@ class MethodChannelRtmpStream extends RtmpStreamPlatform {
     return await MethodChannelHaishinKit.channel
         .invokeMethod<void>("RtmpStream#dispose", params);
   }
+
+  @override
+  Future<void> screenAddChild(Map<String, dynamic> params) async {
+    return await MethodChannelHaishinKit.channel
+        .invokeMethod<void>("RtmpStream#screenAddChild", params);
+  }
 }
