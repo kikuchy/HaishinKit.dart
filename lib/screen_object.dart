@@ -1,24 +1,81 @@
 import 'package:flutter/rendering.dart';
 
+/// The horizontal alignment for the screen object.
 enum ScreenObjectHorizontalAlignment {
+  /// A guide that marks the left edge of the screen object.
   left,
+
+  /// A guide that marks the right edge of the screen object.
   right,
+
+  /// A guide that marks the borizontal center of the screen object.
   center,
 }
 
+/// The vertical alignment for the screen object.
 enum ScreenObjectVerticalAlignment {
+  /// A guide that marks the top edge of the screen object.
   top,
+
+  /// A guide that marks the bottom edge of the screen object.
   bottom,
+
+  /// A guide that marks the vertical middle of the screen object.
   middle,
 }
 
-class VideoTrackScreenObject {
+/// The ScreenObject class is the abstract class for all objects that are rendered on the screen.
+abstract class ScreenObject {
+  /// Specifies the visibility of the object.
+  bool get isVisible;
+
+  /// Specifies the size rectangle.
+  ///
+  /// Limitation: On Android, decimal points are truncated.
+  Size get size;
+
+  /// Specifies the default spacing to laying out content in the screen object.
+  ///
+  /// Limitation: On Android, decimal points are truncated.
+  EdgeInsets get layoutMargin;
+
+  /// Specifies the alignment position along the horizontal axis.
+  ScreenObjectHorizontalAlignment get horizontalAlignment;
+
+  /// Specifies the alignment position along the vertical axis.
+  ScreenObjectVerticalAlignment get verticalAlignment;
+}
+
+/// A enum that defines how a layer displays a player’s visual content within the layer’s bounds.
+enum VideoTrackScreenObjectVideoGravity {
+  /// The video stretches to fill the layer’s bounds.
+  resize,
+
+  /// The video preserves its aspect ratio and fits it within the layer’s bounds.
+  resizeAspect,
+
+  /// The video preserves its aspect ratio and fills the layer’s bounds.
+  resizeAspectFill,
+}
+
+/// An object that manages offscreen rendering a video track source.
+class VideoTrackScreenObject implements ScreenObject {
+  @override
   final bool isVisible;
+  @override
   final Size size;
+  @override
   final EdgeInsets layoutMargin;
+  @override
   final ScreenObjectHorizontalAlignment horizontalAlignment;
+  @override
   final ScreenObjectVerticalAlignment verticalAlignment;
+
+  /// Specifies the alignment position along the vertical axis.
   final int track;
+
+  /// Specifies the videoGravity how the displays the visual content.
+  final VideoTrackScreenObjectVideoGravity videoGravity;
 
   VideoTrackScreenObject({
     required this.track,
@@ -27,6 +84,7 @@ class VideoTrackScreenObject {
     this.layoutMargin = EdgeInsets.zero,
     this.horizontalAlignment = ScreenObjectHorizontalAlignment.left,
     this.verticalAlignment = ScreenObjectVerticalAlignment.top,
+    this.videoGravity = VideoTrackScreenObjectVideoGravity.resizeAspect,
   }) : assert(track >= 0 && track <= 255);
 
   @override
@@ -39,7 +97,8 @@ class VideoTrackScreenObject {
           layoutMargin == other.layoutMargin &&
           horizontalAlignment == other.horizontalAlignment &&
           verticalAlignment == other.verticalAlignment &&
-          track == other.track);
+          track == other.track &&
+          videoGravity == other.videoGravity);
 
   @override
   int get hashCode =>
@@ -48,11 +107,12 @@ class VideoTrackScreenObject {
       layoutMargin.hashCode ^
       horizontalAlignment.hashCode ^
       verticalAlignment.hashCode ^
-      track.hashCode;
+      track.hashCode ^
+      videoGravity.hashCode;
 
   @override
   String toString() {
-    return 'VideoTrackScreenObject{isVisible: $isVisible, size: $size, layoutMargin: $layoutMargin, horizontalAlignment: $horizontalAlignment, verticalAlignment: $verticalAlignment, track: $track}';
+    return 'VideoTrackScreenObject{isVisible: $isVisible, size: $size, layoutMargin: $layoutMargin, horizontalAlignment: $horizontalAlignment, verticalAlignment: $verticalAlignment, track: $track, videoGravity: $videoGravity}';
   }
 
   VideoTrackScreenObject copyWith({
@@ -62,6 +122,7 @@ class VideoTrackScreenObject {
     ScreenObjectHorizontalAlignment? horizontalAlignment,
     ScreenObjectVerticalAlignment? verticalAlignment,
     int? track,
+    VideoTrackScreenObjectVideoGravity? videoGravity,
   }) {
     return VideoTrackScreenObject(
       isVisible: isVisible ?? this.isVisible,
@@ -70,6 +131,7 @@ class VideoTrackScreenObject {
       horizontalAlignment: horizontalAlignment ?? this.horizontalAlignment,
       verticalAlignment: verticalAlignment ?? this.verticalAlignment,
       track: track ?? this.track,
+      videoGravity: videoGravity ?? this.videoGravity,
     );
   }
 
@@ -81,6 +143,7 @@ class VideoTrackScreenObject {
       'horizontalAlignment': horizontalAlignment.name,
       'verticalAlignment': verticalAlignment.name,
       'track': track,
+      'videoGravity': videoGravity.name,
     };
   }
 
@@ -100,6 +163,8 @@ class VideoTrackScreenObject {
       verticalAlignment: ScreenObjectVerticalAlignment.values
           .byName(map['verticalAlignment'] as String),
       track: map['track'] as int,
+      videoGravity: VideoTrackScreenObjectVideoGravity.values
+          .byName(map['videoGravity'] as String),
     );
   }
 }

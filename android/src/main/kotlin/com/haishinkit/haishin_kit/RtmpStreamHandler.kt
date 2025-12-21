@@ -14,6 +14,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.haishinkit.codec.CodecOption
+import com.haishinkit.graphics.VideoGravity
 import com.haishinkit.haishinkit.ProfileLevel
 import com.haishinkit.media.MediaMixer
 import com.haishinkit.media.source.AudioRecordSource
@@ -309,16 +310,16 @@ class RtmpStreamHandler(
                 val camera = trackCameraMap[track]
 
                 CoroutineScope(Dispatchers.Main).launch {
-                    val size = child["size"] as Map<String, Int?>
-                    val layoutMargins = child["layoutMargin"] as Map<String, Int?>
+                    val size = child["size"] as Map<String, Double?>
+                    val layoutMargins = child["layoutMargin"] as Map<String, Double?>
                     val screenObject = camera?.video?.apply {
                         this.isVisible = child["isVisible"] as Boolean
                         this.frame.set(
                             0,
                             0,
-                            size["width"]
+                            size["width"]?.toInt()
                                 ?: throw IllegalArgumentException("width of size must not be null"),
-                            size["height"]
+                            size["height"]?.toInt()
                                 ?: throw IllegalArgumentException("height of size must not be null")
                         )
                         this.horizontalAlignment = when (child["horizontalAlignment"]) {
@@ -335,15 +336,21 @@ class RtmpStreamHandler(
 
                         }
                         this.layoutMargins.set(
-                            layoutMargins["top"]
+                            layoutMargins["top"]?.toInt()
                                 ?: throw IllegalArgumentException("top of layoutMargins must not be null"),
-                            layoutMargins["left"]
+                            layoutMargins["left"]?.toInt()
                                 ?: throw IllegalArgumentException("left of layoutMargins must not be null"),
-                            layoutMargins["bottom"]
+                            layoutMargins["bottom"]?.toInt()
                                 ?: throw IllegalArgumentException("bottom of layoutMargins must not be null"),
-                            layoutMargins["right"]
+                            layoutMargins["right"]?.toInt()
                                 ?: throw IllegalArgumentException("right of layoutMargins must not be null")
                         )
+                        this.videoGravity = when (child["videoGravity"]) {
+                            "resize" -> VideoGravity.RESIZE
+                            "resizeAspect" -> VideoGravity.RESIZE_ASPECT
+                            "resizeAspectFill" -> VideoGravity.RESIZE_ASPECT_FILL
+                            else -> VideoGravity.RESIZE
+                        }
                     }
                 }
                 result.success(null)

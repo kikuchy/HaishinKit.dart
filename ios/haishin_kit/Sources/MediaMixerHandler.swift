@@ -224,6 +224,14 @@ extension MediaMixerHandler: MethodCallHandler {
                         default: .top
                     }
                 }
+                if let videoGravity = child["videoGravity"] as? String {
+                    videoTrackScreenObject.videoGravity = switch videoGravity {
+                        case "resize": .resize
+                        case "resizeAspect": .resizeAspect
+                        case "resizeAspectFill": .resizeAspectFill
+                        default: .resize
+                    }
+                }
                 addedVideoTrackScreenObjects.append(videoTrackScreenObject)
                 try! await mixer.screen.addChild(videoTrackScreenObject)
                 result(nil)
