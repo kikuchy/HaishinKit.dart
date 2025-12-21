@@ -22,6 +22,7 @@ import com.haishinkit.media.source.Camera2Source
 import com.haishinkit.rtmp.RtmpStream
 import com.haishinkit.rtmp.event.Event
 import com.haishinkit.rtmp.event.IEventListener
+import com.haishinkit.screen.ScreenObject
 import com.haishinkit.screen.ScreenObject.Companion.HORIZONTAL_ALIGNMENT_CENTER
 import com.haishinkit.screen.ScreenObject.Companion.VERTICAL_ALIGNMENT_MIDDLE
 import io.flutter.plugin.common.EventChannel
@@ -55,7 +56,7 @@ class RtmpStreamHandler(
             field?.endOfStream()
             field = value
         }
-    private var camera: Camera2Source? = null
+    private var trackCameraMap: MutableMap<Int, Camera2Source> = mutableMapOf()
     private var audio: AudioSource? = null
     private var shouldReattach = false
 
@@ -146,7 +147,7 @@ class RtmpStreamHandler(
                         val options = mutableListOf<CodecOption>()
                         options.add(CodecOption(KEY_PROFILE, profileLevel.profile))
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                          options.add(CodecOption(KEY_LEVEL, profileLevel.level))
+                            options.add(CodecOption(KEY_LEVEL, profileLevel.level))
                         }
                         rtmpStream?.videoSetting?.options = options
                     } catch (ignored: Exception) {
@@ -189,11 +190,15 @@ class RtmpStreamHandler(
 
             "$TAG#attachVideo" -> {
                 val source = call.argument<Map<String, Any?>>("source")
-                if (source == null) {
+                val track = call.argument<Int>("track")
+
+                if (source == null || track == null) {
                     CoroutineScope(Dispatchers.Main).launch {
                         mixer?.attachVideo(0, null)
-                        camera?.close()
-                        camera = null
+                        for (camera in trackCameraMap.values) {
+                            camera.close()
+                        }
+                        trackCameraMap = mutableMapOf()
                         result.success(null)
                     }
                 } else {
@@ -203,11 +208,12 @@ class RtmpStreamHandler(
                     } else {
                         Camera2Source(plugin.flutterPluginBinding.applicationContext)
                     }
-                    this.camera = cameraSource
+                    this.trackCameraMap[track] = cameraSource
                     CoroutineScope(Dispatchers.Main).launch {
                         // Detach current video source
-                        mixer?.attachVideo(0, null)
-                        mixer?.attachVideo(0, cameraSource)
+                        mixer?.attachVideo(track, null)
+                        mixer?.attachVideo(track, cameraSource)
+                        Log.d(TAG, "attachVideo : camera = $cameraSource")
                         result.success(null)
                     }
                 }
@@ -225,7 +231,7 @@ class RtmpStreamHandler(
 
             "$TAG#unregisterTexture" -> {
                 texture?.let { mixer?.unregisterOutput(it) }
-                
+
                 result.success(null)
             }
 
@@ -237,7 +243,9 @@ class RtmpStreamHandler(
                     val height = call.argument<Double>("height") ?: 0
                     Log.d(TAG, "Update device orientation")
                     (plugin.flutterPluginBinding.applicationContext.getSystemService(Context.WINDOW_SERVICE) as? WindowManager)?.defaultDisplay?.orientation?.let {
-                        camera?.video?.deviceOrientation = it
+                        for (camera in trackCameraMap.values) {
+                            camera.video?.deviceOrientation = it
+                        }
                     }
                     texture?.imageExtent = Size(width.toInt(), height.toInt())
 
@@ -279,12 +287,66 @@ class RtmpStreamHandler(
 
                     mixer = null
                     eventSink = null
-                    camera = null
+                    trackCameraMap = mutableMapOf()
                     audio = null
                     rtmpStream = null
                     plugin.onDispose(hashCode())
                     result.success(null)
                 }
+            }
+
+            "$TAG#screenAddChild" -> {
+                val child = call.argument<Map<String, Any?>>("child")
+                if (child == null) {
+                    result.success(null)
+                    return
+                }
+                val track = child["track"] as Int?
+                if (track == null) {
+                    result.success(null)
+                    return
+                }
+                val camera = trackCameraMap[track]
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    val size = child["size"] as Map<String, Int?>
+                    val layoutMargins = child["layoutMargin"] as Map<String, Int?>
+                    val screenObject = camera?.video?.apply {
+                        this.isVisible = child["isVisible"] as Boolean
+                        this.frame.set(
+                            0,
+                            0,
+                            size["width"]
+                                ?: throw IllegalArgumentException("width of size must not be null"),
+                            size["height"]
+                                ?: throw IllegalArgumentException("height of size must not be null")
+                        )
+                        this.horizontalAlignment = when (child["horizontalAlignment"]) {
+                            "left" -> ScreenObject.HORIZONTAL_ALIGNMENT_LEFT
+                            "center" -> ScreenObject.HORIZONTAL_ALIGNMENT_CENTER
+                            "right" -> ScreenObject.HORIZONTAL_ALIGNMENT_RIGHT
+                            else -> ScreenObject.HORIZONTAL_ALIGNMENT_LEFT
+                        }
+                        this.verticalAlignment = when (child["verticalAlignment"]) {
+                            "top" -> ScreenObject.VERTICAL_ALIGNMENT_TOP
+                            "middle" -> ScreenObject.VERTICAL_ALIGNMENT_MIDDLE
+                            "bottom" -> ScreenObject.VERTICAL_ALIGNMENT_BOTTOM
+                            else -> ScreenObject.VERTICAL_ALIGNMENT_TOP
+
+                        }
+                        this.layoutMargins.set(
+                            layoutMargins["top"]
+                                ?: throw IllegalArgumentException("top of layoutMargins must not be null"),
+                            layoutMargins["left"]
+                                ?: throw IllegalArgumentException("left of layoutMargins must not be null"),
+                            layoutMargins["bottom"]
+                                ?: throw IllegalArgumentException("bottom of layoutMargins must not be null"),
+                            layoutMargins["right"]
+                                ?: throw IllegalArgumentException("right of layoutMargins must not be null")
+                        )
+                    }
+                }
+                result.success(null)
             }
         }
     }
@@ -326,7 +388,9 @@ class RtmpStreamHandler(
         if (!shouldReattach) return
         texture?.let { mixer?.registerOutput(it) }
         CoroutineScope(Dispatchers.Main).launch {
-            camera?.let { mixer?.attachVideo(0, it) }
+            for (entry in trackCameraMap.entries) {
+                mixer?.attachVideo(entry.key, entry.value)
+            }
             shouldReattach = false
         }
     }
