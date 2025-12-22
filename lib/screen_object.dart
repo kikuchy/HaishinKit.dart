@@ -44,6 +44,92 @@ abstract class ScreenObject {
 
   /// Specifies the alignment position along the vertical axis.
   ScreenObjectVerticalAlignment get verticalAlignment;
+
+  Map<String, dynamic> toMap();
+}
+
+class TextScreenObject implements ScreenObject {
+  @override
+  final bool isVisible;
+  @override
+  final Size size;
+  @override
+  final EdgeInsets layoutMargin;
+  @override
+  final ScreenObjectHorizontalAlignment horizontalAlignment;
+  @override
+  final ScreenObjectVerticalAlignment verticalAlignment;
+
+  /// Specifies the text value.
+  final String string;
+
+  TextScreenObject({
+    required this.string,
+    this.isVisible = true,
+    this.size = const Size(0, 0),
+    this.layoutMargin = EdgeInsets.zero,
+    this.horizontalAlignment = ScreenObjectHorizontalAlignment.left,
+    this.verticalAlignment = ScreenObjectVerticalAlignment.top,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TextScreenObject &&
+          runtimeType == other.runtimeType &&
+          isVisible == other.isVisible &&
+          size == other.size &&
+          layoutMargin == other.layoutMargin &&
+          horizontalAlignment == other.horizontalAlignment &&
+          verticalAlignment == other.verticalAlignment &&
+          string == other.string);
+
+  @override
+  int get hashCode =>
+      isVisible.hashCode ^
+      size.hashCode ^
+      layoutMargin.hashCode ^
+      horizontalAlignment.hashCode ^
+      verticalAlignment.hashCode ^
+      string.hashCode;
+
+  @override
+  String toString() {
+    return 'TextScreenObject{isVisible: $isVisible, size: $size, layoutMargin: $layoutMargin, horizontalAlignment: $horizontalAlignment, verticalAlignment: $verticalAlignment, string: $string}';
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'screenObjectType': 'TextScreenObject',
+      'hashCode': hashCode,
+      'isVisible': isVisible,
+      'size': size.toMap(),
+      'layoutMargin': layoutMargin.toMap(),
+      'horizontalAlignment': horizontalAlignment.name,
+      'verticalAlignment': verticalAlignment.name,
+      'string': string,
+    };
+  }
+
+  factory TextScreenObject.fromMap(Map<String, dynamic> map) {
+    return TextScreenObject(
+      isVisible: map['isVisible'] as bool,
+      size:
+          Size(map['size']['width'] as double, map['size']['height'] as double),
+      layoutMargin: EdgeInsets.fromLTRB(
+        map['layoutMargin']['left'] as double,
+        map['layoutMargin']['top'] as double,
+        map['layoutMargin']['right'] as double,
+        map['layoutMargin']['bottom'] as double,
+      ),
+      horizontalAlignment: ScreenObjectHorizontalAlignment.values
+          .byName(map['horizontalAlignment'] as String),
+      verticalAlignment: ScreenObjectVerticalAlignment.values
+          .byName(map['verticalAlignment'] as String),
+      string: map['string'] as String,
+    );
+  }
 }
 
 /// A enum that defines how a layer displays a player’s visual content within the layer’s bounds.
@@ -135,8 +221,11 @@ class VideoTrackScreenObject implements ScreenObject {
     );
   }
 
+  @override
   Map<String, dynamic> toMap() {
     return {
+      'screenObjectType': 'VideoTrackScreenObject',
+      'hashCode': hashCode,
       'isVisible': isVisible,
       'size': size.toMap(),
       'layoutMargin': layoutMargin.toMap(),

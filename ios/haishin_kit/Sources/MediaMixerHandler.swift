@@ -17,7 +17,7 @@ final class MediaMixerHandler: NSObject {
     var texture: HKStreamFlutterTexture?
     private lazy var mixer = MediaMixer(captureSessionMode: .multi, multiTrackAudioMixingEnabled: false)
     private var attachedVideoTracks: [UInt8] = []
-    private var addedVideoTrackScreenObjects: [VideoTrackScreenObject] = []
+    private var addedScreenObjects: [Int: ScreenObject] = [:]
 
     override init() {
         super.init()
@@ -184,32 +184,55 @@ extension MediaMixerHandler: MethodCallHandler {
             }
         case "RtmpStream#screenAddChild":
             guard
-                let child = arguments["child"] as? [String: Any?] else {
+                let child = arguments["child"] as? [String: Any?],
+                let screenObjectType = child["screenObjectType"] as? String,
+                let hashCode = child["hashCode"] as? Int else {
                 result(nil)
                 return
             }
             Task { @ScreenActor in
-                let videoTrackScreenObject = VideoTrackScreenObject()
-                if let track = child["track"] as? Int {
-                    videoTrackScreenObject.track = UInt8(track)
+                let screenObject: ScreenObject  
+                if screenObjectType == "VideoTrackScreenObject" {
+                    let vtso = VideoTrackScreenObject()
+                    if let track = child["track"] as? Int {
+                        vtso.track = UInt8(track)
+                    }
+                    if let videoGravity = child["videoGravity"] as? String {
+                        vtso.videoGravity = switch videoGravity {
+                            case "resize": .resize
+                            case "resizeAspect": .resizeAspect
+                            case "resizeAspectFill": .resizeAspectFill
+                            default: .resize
+                        }
+                }
+                    screenObject = vtso
+                } else if screenObjectType == "TextScreenObject" {
+                    let tso = TextScreenObject()
+                    if let string = child["string"] as? String {
+                        tso.string = string
+                    }
+                    screenObject = tso
+                } else {
+                    result(nil)
+                    return
                 }
                 if let isVisible = child["isVisible"] as? Bool {
-                    videoTrackScreenObject.isVisible = isVisible
+                    screenObject.isVisible = isVisible
                 }
                 if let size = child["size"] as? [String: Any?],
                 let width = size["width"] as? Double,
                 let height = size["height"] as? Double {
-                    videoTrackScreenObject.size = CGSize(width: width, height: height)
+                    screenObject.size = CGSize(width: width, height: height)
                 }
                 if let layoutMargin = child["layoutMargin"] as? [String: Any?],
                 let left = layoutMargin["left"] as? Double,
                 let top = layoutMargin["top"] as? Double,
                 let right = layoutMargin["right"] as? Double,
                 let bottom = layoutMargin["bottom"] as? Double {
-                    videoTrackScreenObject.layoutMargin = NSEdgeInsets(top: top, left: left, bottom: bottom, right: right)
+                    screenObject.layoutMargin = NSEdgeInsets(top: top, left: left, bottom: bottom, right: right)
                 }
                 if let horizontalAlignment = child["horizontalAlignment"] as? String {
-                    videoTrackScreenObject.horizontalAlignment = switch horizontalAlignment {
+                    screenObject.horizontalAlignment = switch horizontalAlignment {
                         case "left": .left
                         case "center": .center
                         case "right": .right
@@ -217,23 +240,15 @@ extension MediaMixerHandler: MethodCallHandler {
                     }
                 }
                 if let verticalAlignment = child["verticalAlignment"] as? String {
-                    videoTrackScreenObject.verticalAlignment = switch verticalAlignment {
+                    screenObject.verticalAlignment = switch verticalAlignment {
                         case "top": .top
                         case "middle": .middle
                         case "bottom": .bottom
                         default: .top
                     }
                 }
-                if let videoGravity = child["videoGravity"] as? String {
-                    videoTrackScreenObject.videoGravity = switch videoGravity {
-                        case "resize": .resize
-                        case "resizeAspect": .resizeAspect
-                        case "resizeAspectFill": .resizeAspectFill
-                        default: .resize
-                    }
-                }
-                addedVideoTrackScreenObjects.append(videoTrackScreenObject)
-                try! await mixer.screen.addChild(videoTrackScreenObject)
+                try! await mixer.screen.addChild(screenObject)
+                addedScreenObjects[hashCode] = screenObject
                 result(nil)
             }
         default:

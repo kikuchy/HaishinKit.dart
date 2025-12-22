@@ -189,7 +189,7 @@ class RtmpStreamScreen extends Screen {
   RtmpStreamScreen(this.stream);
 
   @override
-  Future<void> addChild(VideoTrackScreenObject child) async {
+  Future<void> addChild(ScreenObject child) async {
     assert(stream.memory != null);
     await RtmpStreamPlatform.instance.screenAddChild({
       "memory": stream.memory,
