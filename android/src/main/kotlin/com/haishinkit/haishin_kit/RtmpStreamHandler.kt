@@ -1,6 +1,7 @@
 package com.haishinkit.haishin_kit
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Rect
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
@@ -23,6 +24,7 @@ import com.haishinkit.media.source.Camera2Source
 import com.haishinkit.rtmp.RtmpStream
 import com.haishinkit.rtmp.event.Event
 import com.haishinkit.rtmp.event.IEventListener
+import com.haishinkit.screen.ImageScreenObject
 import com.haishinkit.screen.ScreenObject
 import com.haishinkit.screen.ScreenObject.Companion.HORIZONTAL_ALIGNMENT_CENTER
 import com.haishinkit.screen.ScreenObject.Companion.VERTICAL_ALIGNMENT_MIDDLE
@@ -33,6 +35,9 @@ import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.InputStream
+import java.net.URL
 
 class RtmpStreamHandler(
     private val plugin: HaishinKitPlugin, handler: RtmpConnectionHandler?
@@ -339,6 +344,54 @@ class RtmpStreamHandler(
                         so.applyCommonProperties(child)
                         CoroutineScope(Dispatchers.Main).launch {
                             mixer?.screen?.addChild(so)
+                        }
+                    }
+
+                    "ImageScreenObject" -> {
+                        val image = child["image"] as Map<String, Any?>?
+                        if (image == null) {
+                            result.success(null)
+                            return
+                        }
+                        val so = ImageScreenObject().apply {
+                            this.applyCommonProperties(child)
+                        }
+                        CoroutineScope(Dispatchers.IO).launch {
+                            when (image["type"]) {
+                                "memory" -> {
+                                    val bytes = image["bytes"] as ByteArray?
+                                    if (bytes == null) {
+                                        result.success(null)
+                                        return@launch
+                                    }
+                                    so.bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                }
+
+                                "file" -> {
+                                    val path = image["path"] as String?
+                                    if (path == null) {
+                                        result.success(null)
+                                        return@launch
+                                    }
+                                    so.bitmap = BitmapFactory.decodeFile(path)
+                                }
+
+                                "network" -> {
+                                    val urlStr = image["url"] as String?
+                                    if (urlStr == null) {
+                                        result.success(null)
+                                        return@launch
+                                    }
+                                    val url = URL(urlStr)
+                                    val inputStream = url.getContent() as (InputStream)
+                                    so.bitmap = inputStream.use {
+                                        BitmapFactory.decodeStream(it)
+                                    }
+                                }
+                            }
+                            withContext(Dispatchers.Main) {
+                                mixer?.screen?.addChild(so)
+                            }
                         }
                     }
                 }
