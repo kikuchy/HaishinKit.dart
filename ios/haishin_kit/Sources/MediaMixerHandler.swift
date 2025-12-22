@@ -212,6 +212,49 @@ extension MediaMixerHandler: MethodCallHandler {
                         tso.string = string
                     }
                     screenObject = tso
+                } else if screenObjectType == "ImageScreenObject" {
+                    let iso = ImageScreenObject()
+                    #if canImport(UIKit)
+                    var uiImage: UIImage?
+                    #else
+                    var nsImage: NSImage?
+                    #endif
+                    if let image = child["image"] as? [String: Any?] {
+                        if let type = image["type"] as? String {
+                            if type == "file" {
+                                if let path = image["path"] as? String {
+                                    #if canImport(UIKit)
+                                    uiImage = UIImage(contentsOfFile: path)
+                                    #else
+                                    nsImage = NSImage(contentsOfFile: path)
+                                    #endif
+                                }
+                            } else if type == "network" {
+                                if let urlStr = image["url"] as? String, let url = URL(string: urlStr) {
+                                    let (data, urlResponse) = try! await URLSession.shared.data(for: URLRequest(url: url))
+                                    #if canImport(UIKit)
+                                    uiImage = UIImage(data: data)
+                                    #else
+                                    nsImage = NSImage(data: data)
+                                    #endif
+                                }
+                            } else if type == "memory" {
+                                if let bytes = image["bytes"] as? FlutterStandardTypedData {
+                                    #if canImport(UIKit)
+                                    uiImage = UIImage(data: bytes.data)
+                                    #else
+                                    nsImage = NSImage(data: bytes.data)
+                                    #endif
+                                }
+                            }
+                        }
+                    }
+                    #if canImport(UIKit)
+                    iso.cgImage = uiImage?.cgImage
+                    #else
+                    iso.cgImage = nsImage?.cgImage(forProposedRect: nil, context: nil, hints: nil)
+                    #endif
+                    screenObject = iso
                 } else {
                     result(nil)
                     return

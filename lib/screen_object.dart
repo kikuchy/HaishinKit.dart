@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/rendering.dart';
 
 /// The horizontal alignment for the screen object.
@@ -111,24 +113,164 @@ class TextScreenObject implements ScreenObject {
       'string': string,
     };
   }
+}
 
-  factory TextScreenObject.fromMap(Map<String, dynamic> map) {
-    return TextScreenObject(
-      isVisible: map['isVisible'] as bool,
-      size:
-          Size(map['size']['width'] as double, map['size']['height'] as double),
-      layoutMargin: EdgeInsets.fromLTRB(
-        map['layoutMargin']['left'] as double,
-        map['layoutMargin']['top'] as double,
-        map['layoutMargin']['right'] as double,
-        map['layoutMargin']['bottom'] as double,
-      ),
-      horizontalAlignment: ScreenObjectHorizontalAlignment.values
-          .byName(map['horizontalAlignment'] as String),
-      verticalAlignment: ScreenObjectVerticalAlignment.values
-          .byName(map['verticalAlignment'] as String),
-      string: map['string'] as String,
-    );
+abstract class _ImageSource {
+  Map<String, dynamic> toMap();
+}
+
+class _ImageSourceFile implements _ImageSource {
+  final String path;
+
+  _ImageSourceFile({required this.path});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _ImageSourceFile &&
+          runtimeType == other.runtimeType &&
+          path == other.path;
+
+  @override
+  int get hashCode => path.hashCode;
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'type': 'file',
+      'path': path,
+    };
+  }
+}
+
+class _ImageSourceNetwork implements _ImageSource {
+  final String url;
+
+  _ImageSourceNetwork({required this.url});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _ImageSourceNetwork &&
+          runtimeType == other.runtimeType &&
+          url == other.url;
+
+  @override
+  int get hashCode => url.hashCode;
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'type': 'network',
+      'url': url,
+    };
+  }
+}
+
+class _ImageSourceMemory implements _ImageSource {
+  final Uint8List bytes;
+
+  _ImageSourceMemory({required this.bytes});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _ImageSourceMemory &&
+          runtimeType == other.runtimeType &&
+          bytes == other.bytes;
+
+  @override
+  int get hashCode => bytes.hashCode;
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'type': 'memory',
+      'bytes': bytes,
+    };
+  }
+}
+
+class ImageScreenObject implements ScreenObject {
+  @override
+  final bool isVisible;
+  @override
+  final Size size;
+  @override
+  final EdgeInsets layoutMargin;
+  @override
+  final ScreenObjectHorizontalAlignment horizontalAlignment;
+  @override
+  final ScreenObjectVerticalAlignment verticalAlignment;
+
+  /// Specifies the image value.
+  final _ImageSource _image;
+
+  ImageScreenObject.file({
+    required String path,
+    this.isVisible = true,
+    this.size = const Size(0, 0),
+    this.layoutMargin = EdgeInsets.zero,
+    this.horizontalAlignment = ScreenObjectHorizontalAlignment.left,
+    this.verticalAlignment = ScreenObjectVerticalAlignment.top,
+  }) : _image = _ImageSourceFile(path: path);
+
+  ImageScreenObject.network({
+    required String url,
+    this.isVisible = true,
+    this.size = const Size(0, 0),
+    this.layoutMargin = EdgeInsets.zero,
+    this.horizontalAlignment = ScreenObjectHorizontalAlignment.left,
+    this.verticalAlignment = ScreenObjectVerticalAlignment.top,
+  }) : _image = _ImageSourceNetwork(url: url);
+
+  ImageScreenObject.memory({
+    required Uint8List bytes,
+    this.isVisible = true,
+    this.size = const Size(0, 0),
+    this.layoutMargin = EdgeInsets.zero,
+    this.horizontalAlignment = ScreenObjectHorizontalAlignment.left,
+    this.verticalAlignment = ScreenObjectVerticalAlignment.top,
+  }) : _image = _ImageSourceMemory(bytes: bytes);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ImageScreenObject &&
+          runtimeType == other.runtimeType &&
+          isVisible == other.isVisible &&
+          size == other.size &&
+          layoutMargin == other.layoutMargin &&
+          horizontalAlignment == other.horizontalAlignment &&
+          verticalAlignment == other.verticalAlignment &&
+          _image == other._image;
+
+  @override
+  int get hashCode =>
+      isVisible.hashCode ^
+      size.hashCode ^
+      layoutMargin.hashCode ^
+      horizontalAlignment.hashCode ^
+      verticalAlignment.hashCode ^
+      _image.hashCode;
+
+  @override
+  String toString() {
+    return 'ImageScreenObject{isVisible: $isVisible, size: $size, layoutMargin: $layoutMargin, horizontalAlignment: $horizontalAlignment, verticalAlignment: $verticalAlignment, _image: $_image}';
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'screenObjectType': 'ImageScreenObject',
+      'hashCode': hashCode,
+      'isVisible': isVisible,
+      'size': size.toMap(),
+      'layoutMargin': layoutMargin.toMap(),
+      'horizontalAlignment': horizontalAlignment.name,
+      'verticalAlignment': verticalAlignment.name,
+      'image': _image.toMap(),
+    };
   }
 }
 
@@ -234,27 +376,6 @@ class VideoTrackScreenObject implements ScreenObject {
       'track': track,
       'videoGravity': videoGravity.name,
     };
-  }
-
-  factory VideoTrackScreenObject.fromMap(Map<String, dynamic> map) {
-    return VideoTrackScreenObject(
-      isVisible: map['isVisible'] as bool,
-      size:
-          Size(map['size']['width'] as double, map['size']['height'] as double),
-      layoutMargin: EdgeInsets.fromLTRB(
-        map['layoutMargin']['left'] as double,
-        map['layoutMargin']['top'] as double,
-        map['layoutMargin']['right'] as double,
-        map['layoutMargin']['bottom'] as double,
-      ),
-      horizontalAlignment: ScreenObjectHorizontalAlignment.values
-          .byName(map['horizontalAlignment'] as String),
-      verticalAlignment: ScreenObjectVerticalAlignment.values
-          .byName(map['verticalAlignment'] as String),
-      track: map['track'] as int,
-      videoGravity: VideoTrackScreenObjectVideoGravity.values
-          .byName(map['videoGravity'] as String),
-    );
   }
 }
 
