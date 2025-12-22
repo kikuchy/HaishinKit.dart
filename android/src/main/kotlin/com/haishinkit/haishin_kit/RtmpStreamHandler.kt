@@ -26,6 +26,7 @@ import com.haishinkit.rtmp.event.IEventListener
 import com.haishinkit.screen.ScreenObject
 import com.haishinkit.screen.ScreenObject.Companion.HORIZONTAL_ALIGNMENT_CENTER
 import com.haishinkit.screen.ScreenObject.Companion.VERTICAL_ALIGNMENT_MIDDLE
+import com.haishinkit.screen.TextScreenObject
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -298,58 +299,46 @@ class RtmpStreamHandler(
 
             "$TAG#screenAddChild" -> {
                 val child = call.argument<Map<String, Any?>>("child")
-                if (child == null) {
+                val hashCode = child?.get("hashCode") as Int?
+                if (child == null || hashCode == null) {
                     result.success(null)
                     return
                 }
-                val track = child["track"] as Int?
-                if (track == null) {
-                    result.success(null)
-                    return
-                }
-                val camera = trackCameraMap[track]
 
-                CoroutineScope(Dispatchers.Main).launch {
-                    val size = child["size"] as Map<String, Double?>
-                    val layoutMargins = child["layoutMargin"] as Map<String, Double?>
-                    val screenObject = camera?.video?.apply {
-                        this.isVisible = child["isVisible"] as Boolean
-                        this.frame.set(
-                            0,
-                            0,
-                            size["width"]?.toInt()
-                                ?: throw IllegalArgumentException("width of size must not be null"),
-                            size["height"]?.toInt()
-                                ?: throw IllegalArgumentException("height of size must not be null")
-                        )
-                        this.horizontalAlignment = when (child["horizontalAlignment"]) {
-                            "left" -> ScreenObject.HORIZONTAL_ALIGNMENT_LEFT
-                            "center" -> ScreenObject.HORIZONTAL_ALIGNMENT_CENTER
-                            "right" -> ScreenObject.HORIZONTAL_ALIGNMENT_RIGHT
-                            else -> ScreenObject.HORIZONTAL_ALIGNMENT_LEFT
+                when (child["screenObjectType"]) {
+                    "VideoTrackScreenObject" -> {
+                        val track = child["track"] as Int?
+                        if (track == null) {
+                            result.success(null)
+                            return
                         }
-                        this.verticalAlignment = when (child["verticalAlignment"]) {
-                            "top" -> ScreenObject.VERTICAL_ALIGNMENT_TOP
-                            "middle" -> ScreenObject.VERTICAL_ALIGNMENT_MIDDLE
-                            "bottom" -> ScreenObject.VERTICAL_ALIGNMENT_BOTTOM
-                            else -> ScreenObject.VERTICAL_ALIGNMENT_TOP
+                        val camera = trackCameraMap[track]
 
+                        CoroutineScope(Dispatchers.Main).launch {
+                            camera?.video?.apply {
+                                this.applyCommonProperties(child)
+                                this.videoGravity = when (child["videoGravity"]) {
+                                    "resize" -> VideoGravity.RESIZE
+                                    "resizeAspect" -> VideoGravity.RESIZE_ASPECT
+                                    "resizeAspectFill" -> VideoGravity.RESIZE_ASPECT_FILL
+                                    else -> VideoGravity.RESIZE
+                                }
+                            }
                         }
-                        this.layoutMargins.set(
-                            layoutMargins["top"]?.toInt()
-                                ?: throw IllegalArgumentException("top of layoutMargins must not be null"),
-                            layoutMargins["left"]?.toInt()
-                                ?: throw IllegalArgumentException("left of layoutMargins must not be null"),
-                            layoutMargins["bottom"]?.toInt()
-                                ?: throw IllegalArgumentException("bottom of layoutMargins must not be null"),
-                            layoutMargins["right"]?.toInt()
-                                ?: throw IllegalArgumentException("right of layoutMargins must not be null")
-                        )
-                        this.videoGravity = when (child["videoGravity"]) {
-                            "resize" -> VideoGravity.RESIZE
-                            "resizeAspect" -> VideoGravity.RESIZE_ASPECT
-                            "resizeAspectFill" -> VideoGravity.RESIZE_ASPECT_FILL
-                            else -> VideoGravity.RESIZE
+                    }
+
+                    "TextScreenObject" -> {
+                        val string = child["string"] as String?
+                        if (string == null) {
+                            result.success(null)
+                            return
+                        }
+                        val so = TextScreenObject().apply {
+                            this.value = string
+                        }
+                        so.applyCommonProperties(child)
+                        CoroutineScope(Dispatchers.Main).launch {
+                            mixer?.screen?.addChild(so)
                         }
                     }
                 }
@@ -420,5 +409,42 @@ class RtmpStreamHandler(
             }
         }
         return null
+    }
+
+    private fun ScreenObject.applyCommonProperties(child: Map<String, Any?>) {
+        val size = child["size"] as Map<String, Double?>
+        val layoutMargins = child["layoutMargin"] as Map<String, Double?>
+        this.isVisible = child["isVisible"] as Boolean
+        this.frame.set(
+            0,
+            0,
+            size["width"]?.toInt()
+                ?: throw IllegalArgumentException("width of size must not be null"),
+            size["height"]?.toInt()
+                ?: throw IllegalArgumentException("height of size must not be null")
+        )
+        this.horizontalAlignment = when (child["horizontalAlignment"]) {
+            "left" -> ScreenObject.HORIZONTAL_ALIGNMENT_LEFT
+            "center" -> ScreenObject.HORIZONTAL_ALIGNMENT_CENTER
+            "right" -> ScreenObject.HORIZONTAL_ALIGNMENT_RIGHT
+            else -> ScreenObject.HORIZONTAL_ALIGNMENT_LEFT
+        }
+        this.verticalAlignment = when (child["verticalAlignment"]) {
+            "top" -> ScreenObject.VERTICAL_ALIGNMENT_TOP
+            "middle" -> ScreenObject.VERTICAL_ALIGNMENT_MIDDLE
+            "bottom" -> ScreenObject.VERTICAL_ALIGNMENT_BOTTOM
+            else -> ScreenObject.VERTICAL_ALIGNMENT_TOP
+
+        }
+        this.layoutMargins.set(
+            layoutMargins["top"]?.toInt()
+                ?: throw IllegalArgumentException("top of layoutMargins must not be null"),
+            layoutMargins["left"]?.toInt()
+                ?: throw IllegalArgumentException("left of layoutMargins must not be null"),
+            layoutMargins["bottom"]?.toInt()
+                ?: throw IllegalArgumentException("bottom of layoutMargins must not be null"),
+            layoutMargins["right"]?.toInt()
+                ?: throw IllegalArgumentException("right of layoutMargins must not be null")
+        )
     }
 }
