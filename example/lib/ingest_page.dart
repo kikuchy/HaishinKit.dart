@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:haishin_kit/audio_source.dart';
 import 'package:haishin_kit/haishin_kit_platform_interface.dart';
 import 'package:haishin_kit/rtmp_connection.dart';
 import 'package:haishin_kit/rtmp_stream.dart';
+import 'package:haishin_kit/screen_object.dart';
 import 'package:haishin_kit/stream_view_texture.dart';
 import 'package:haishin_kit/video_source.dart';
 import 'package:haishin_kit_example/preference.dart';
@@ -26,6 +28,7 @@ class _IngestState extends State<IngestPage> {
   CameraPosition currentPosition = CameraPosition.back;
   List<VideoSource> _videoSources = [];
   VideoSource? _mainVideoSource;
+  VideoSource? _pinpVideoSource;
 
   List<DropdownMenuEntry<VideoSource>> get _videoSourceEntries => _videoSources
       .map((e) => DropdownMenuEntry(label: e.name ?? e.id, value: e))
@@ -55,6 +58,23 @@ class _IngestState extends State<IngestPage> {
               _stream?.attachVideo(value, 0);
               setState(() {
                 _mainVideoSource = value;
+              });
+            },
+            dropdownMenuEntries: _videoSourceEntries,
+          ),
+          DropdownMenu<VideoSource>(
+            initialSelection: _pinpVideoSource,
+            onSelected: (value) {
+              _stream?.attachVideo(value, 1);
+              _stream?.screen.addChild(VideoTrackScreenObject(
+                track: 1,
+                size: const Size(180, 180),
+                layoutMargin: const EdgeInsets.all(10),
+                horizontalAlignment: ScreenObjectHorizontalAlignment.center,
+                verticalAlignment: ScreenObjectVerticalAlignment.middle,
+              ));
+              setState(() {
+                _pinpVideoSource = value;
               });
             },
             dropdownMenuEntries: _videoSourceEntries,
@@ -117,8 +137,25 @@ class _IngestState extends State<IngestPage> {
       }
     });
     RtmpStream stream = await RtmpStream.create(connection);
-    stream.attachAudio(AudioSource());
-    stream.attachVideo(_mainVideoSource, 0);
+    await stream.attachAudio(AudioSource());
+    await stream.attachVideo(_mainVideoSource, 0);
+    await stream.screen.addChild(TextScreenObject(
+      string: "Hello World",
+      size: const Size(180, 180),
+      layoutMargin: const EdgeInsets.all(10),
+      horizontalAlignment: ScreenObjectHorizontalAlignment.center,
+      verticalAlignment: ScreenObjectVerticalAlignment.middle,
+    ));
+    await stream.screen.addChild(ImageScreenObject.memory(
+      bytes: (await rootBundle.load("assets/flutter_logo.png"))
+          .buffer
+          .asUint8List(),
+      size: const Size(180, 180),
+      layoutMargin: const EdgeInsets.all(10),
+      horizontalAlignment: ScreenObjectHorizontalAlignment.center,
+      verticalAlignment: ScreenObjectVerticalAlignment.middle,
+    ));
+    print("");
 
     setState(() {
       _connection = connection;
