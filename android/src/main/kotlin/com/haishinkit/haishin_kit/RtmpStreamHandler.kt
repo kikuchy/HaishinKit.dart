@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.media.MediaRecorder
 import android.media.MediaFormat.KEY_LEVEL
 import android.media.MediaFormat.KEY_PROFILE
 import android.os.Build
@@ -180,7 +181,12 @@ class RtmpStreamHandler(
                     audio = null
 
                     if (source != null) {
-                        audio = AudioRecordSource(plugin.flutterPluginBinding.applicationContext)
+                        val androidSourceName = source["androidSource"] as? String
+                        val androidSource = parseAndroidAudioSource(androidSourceName)
+                        audio = createAudioRecordSource(
+                            plugin.flutterPluginBinding.applicationContext,
+                            androidSource
+                        )
                         mixer?.attachAudio(0, audio)
                     }
                     result.success(null)
@@ -354,5 +360,46 @@ class RtmpStreamHandler(
             }
         }
         return null
+    }
+
+    private fun parseAndroidAudioSource(name: String?): Int? {
+        return when (name) {
+            null -> null
+            "mic" -> MediaRecorder.AudioSource.MIC
+            "camcorder" -> MediaRecorder.AudioSource.CAMCORDER
+            "voiceCommunication" -> MediaRecorder.AudioSource.VOICE_COMMUNICATION
+            "voiceRecognition" -> MediaRecorder.AudioSource.VOICE_RECOGNITION
+            "unprocessed" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                MediaRecorder.AudioSource.UNPROCESSED
+            } else {
+                MediaRecorder.AudioSource.MIC
+            }
+            "voicePerformance" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaRecorder.AudioSource.VOICE_PERFORMANCE
+            } else {
+                MediaRecorder.AudioSource.MIC
+            }
+            else -> MediaRecorder.AudioSource.MIC
+        }
+    }
+
+    private fun createAudioRecordSource(context: Context, androidAudioSource: Int?): AudioSource {
+        if (androidAudioSource != null) {
+            try {
+                val ctor = AudioRecordSource::class.java.constructors.firstOrNull { c ->
+                    val params = c.parameterTypes
+                    params.size == 2 &&
+                        params[0] == Context::class.java &&
+                        (params[1] == Int::class.javaPrimitiveType || params[1] == Int::class.java)
+                }
+                if (ctor != null) {
+                    @Suppress("UNCHECKED_CAST")
+                    return ctor.newInstance(context, androidAudioSource) as AudioSource
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to create AudioRecordSource with audioSource=$androidAudioSource", e)
+            }
+        }
+        return AudioRecordSource(context)
     }
 }

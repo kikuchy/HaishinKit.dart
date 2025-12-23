@@ -138,7 +138,14 @@ extension MediaMixerHandler: MethodCallHandler {
                 if source == nil {
                     try? await mixer.attachAudio(nil)
                 } else {
-                    try? await mixer.attachAudio(AVCaptureDevice.default(for: .audio))
+                    let deviceId = source?["deviceId"] as? String
+                    let device: AVCaptureDevice? = {
+                        if let deviceId {
+                            return AVCaptureDevice.devices(for: .audio).first(where: { $0.uniqueID == deviceId })
+                        }
+                        return AVCaptureDevice.default(for: .audio)
+                    }()
+                    try? await mixer.attachAudio(device)
                 }
                 result(nil)
             }
