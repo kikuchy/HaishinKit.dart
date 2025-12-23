@@ -4,6 +4,7 @@ import 'package:haishin_kit/haishin_kit_platform_interface.dart';
 import 'package:haishin_kit/haishin_kit_method_channel.dart';
 import 'package:haishin_kit/rtmp_connection.dart';
 import 'package:haishin_kit/video_source.dart';
+import 'package:haishin_kit/audio_source.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockHaishinKitPlatform
@@ -24,6 +25,9 @@ class MockHaishinKitPlatform
 
   @override
   Future<List<VideoSource>> get videoSources => Future.value([]);
+
+  @override
+  Future<List<AudioSource>> get audioSources => Future.value([]);
 }
 
 void main() {

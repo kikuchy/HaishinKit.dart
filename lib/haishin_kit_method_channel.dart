@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:haishin_kit/audio_source.dart';
 import 'package:haishin_kit/rtmp_connection.dart';
 import 'package:haishin_kit/video_source.dart';
 
@@ -34,6 +35,19 @@ class MethodChannelHaishinKit extends HaishinKitPlatform {
     return result
         .cast<Map<dynamic, dynamic>>()
         .map((e) => VideoSource.fromMap(e.cast<String, dynamic>()))
+        .toList();
+  }
+
+  @override
+  Future<List<AudioSource>> get audioSources async {
+    final List<dynamic>? result =
+        await channel.invokeMethod<List<dynamic>>('getAudioSources');
+    if (result == null) {
+      return [];
+    }
+    return result
+        .cast<Map<dynamic, dynamic>>()
+        .map((e) => AudioSource.fromMap(e.cast<String, dynamic>()))
         .toList();
   }
 }

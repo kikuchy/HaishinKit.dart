@@ -26,8 +26,14 @@ class _IngestState extends State<IngestPage> {
   CameraPosition currentPosition = CameraPosition.back;
   List<VideoSource> _videoSources = [];
   VideoSource? _mainVideoSource;
+  List<AudioSource> _audioSources = [];
+  AudioSource? _mainAudioSource;
 
   List<DropdownMenuEntry<VideoSource>> get _videoSourceEntries => _videoSources
+      .map((e) => DropdownMenuEntry(label: e.name ?? e.id, value: e))
+      .toList();
+
+  List<DropdownMenuEntry<AudioSource>> get _audioSourceEntries => _audioSources
       .map((e) => DropdownMenuEntry(label: e.name ?? e.id, value: e))
       .toList();
 
@@ -58,6 +64,16 @@ class _IngestState extends State<IngestPage> {
               });
             },
             dropdownMenuEntries: _videoSourceEntries,
+          ),
+          DropdownMenu<AudioSource>(
+            initialSelection: _mainAudioSource,
+            onSelected: (value) {
+              _stream?.attachAudio(value);
+              setState(() {
+                _mainAudioSource = value;
+              });
+            },
+            dropdownMenuEntries: _audioSourceEntries,
           ),
         ]),
         body: Center(
@@ -96,6 +112,8 @@ class _IngestState extends State<IngestPage> {
 
     _videoSources = await HaishinKitPlatform.instance.videoSources;
     _mainVideoSource = _videoSources.firstOrNull;
+    _audioSources = await HaishinKitPlatform.instance.audioSources;
+    _mainAudioSource = _audioSources.firstOrNull;
 
     // Set up AVAudioSession for iOS.
     final session = await AudioSession.instance;
@@ -117,7 +135,7 @@ class _IngestState extends State<IngestPage> {
       }
     });
     RtmpStream stream = await RtmpStream.create(connection);
-    stream.attachAudio(AudioSource());
+    stream.attachAudio(_mainAudioSource);
     stream.attachVideo(_mainVideoSource!);
 
     setState(() {

@@ -134,9 +134,12 @@ extension MediaMixerHandler: MethodCallHandler {
             }
         case "RtmpStream#attachAudio":
             let source = arguments["source"] as? [String: Any?]
+            let id = source?["id"] as? String
             Task {
                 if source == nil {
                     try? await mixer.attachAudio(nil)
+                } else if let id = id {
+                    try? await mixer.attachAudio(AVCaptureDevice(uniqueID: id))
                 } else {
                     try? await mixer.attachAudio(AVCaptureDevice.default(for: .audio))
                 }

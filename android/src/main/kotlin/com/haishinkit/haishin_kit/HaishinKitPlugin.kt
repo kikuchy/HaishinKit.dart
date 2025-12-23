@@ -4,6 +4,9 @@ import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -76,6 +79,18 @@ class HaishinKitPlugin : FlutterPlugin, MethodCallHandler {
                         else -> "unspecified"
                     }
                     mapOf("id" to it, "position" to position)
+                })
+            }
+
+            "getAudioSources" -> {
+                val manager =
+                    flutterPluginBinding.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                val devices = manager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+                result.success(devices.map {
+                    mapOf(
+                        "id" to it.id.toString(),
+                        "name" to it.productName.toString()
+                    )
                 })
             }
 

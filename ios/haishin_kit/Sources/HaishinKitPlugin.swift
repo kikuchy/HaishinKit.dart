@@ -105,6 +105,18 @@ extension HaishinKitPlugin: FlutterPlugin {
                 ]
             }
             result(videoList)
+        case "getAudioSources":
+            let discoverySession = AVCaptureDevice.DiscoverySession(
+                deviceTypes: [.microphone],
+                mediaType: .audio,
+                position: .unspecified)
+            let audioList = discoverySession.devices.map { device in
+                return [
+                    "id": device.uniqueID,
+                    "name": device.localizedName,
+                ]
+            }
+            result(audioList)
         default:
             result(FlutterMethodNotImplemented)
         }

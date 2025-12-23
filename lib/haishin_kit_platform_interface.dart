@@ -1,3 +1,4 @@
+import 'package:haishin_kit/audio_source.dart';
 import 'package:haishin_kit/rtmp_connection.dart';
 import 'package:haishin_kit/video_source.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -39,5 +40,10 @@ abstract class HaishinKitPlatform extends PlatformInterface {
   /// Gets the available video sources.
   Future<List<VideoSource>> get videoSources {
     throw UnimplementedError('videoSources has not been implemented.');
+  }
+
+  /// Gets the available audio sources.
+  Future<List<AudioSource>> get audioSources {
+    throw UnimplementedError('audioSources has not been implemented.');
   }
 }

@@ -146,7 +146,7 @@ class RtmpStreamHandler(
                         val options = mutableListOf<CodecOption>()
                         options.add(CodecOption(KEY_PROFILE, profileLevel.profile))
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                          options.add(CodecOption(KEY_LEVEL, profileLevel.level))
+                            options.add(CodecOption(KEY_LEVEL, profileLevel.level))
                         }
                         rtmpStream?.videoSetting?.options = options
                     } catch (ignored: Exception) {
@@ -225,7 +225,7 @@ class RtmpStreamHandler(
 
             "$TAG#unregisterTexture" -> {
                 texture?.let { mixer?.unregisterOutput(it) }
-                
+
                 result.success(null)
             }
 
